@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e8f1ef">
+  <title>AGV Delivery | Điều phối kho hàng</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="AGV Delivery">
+        <span class="brand-mark">AGV<span>+</span></span>
+        <span class="brand-copy"><strong>AGV DELIVERY</strong><small>SMART WAREHOUSE SIMULATOR</small></span>
+      </a>
+      <div class="topbar-right">
+        <div class="shift-indicator"><span class="live-dot"></span> MÀN VẬN HÀNH <strong id="shift-number">01</strong></div>
+        <div class="best-score"><span>🏆</span><small>KỶ LỤC</small><strong id="high-score">0</strong></div>
+        <button class="menu-button" id="menu-button" type="button" aria-label="Mở menu" aria-haspopup="dialog" title="Menu">☰</button>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="Mô phỏng kho hàng AGV">
+      <aside class="control-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">BẢNG ĐIỀU KHIỂN</p><h1>Đội xe tự hành</h1></div>
+          <span class="connection"><i></i> ONLINE</span>
+        </div>
+
+        <div class="robot-card">
+          <div class="robot-avatar" aria-hidden="true">🤖</div>
+          <div class="robot-info"><span>ROBOT ĐANG CHỌN</span><strong>AGV-07 <b id="robot-status">CHỜ LỆNH</b></strong><small id="robot-task">Chưa có đơn hàng</small></div>
+        </div>
+
+        <div class="metrics-grid" aria-live="polite">
+          <div class="metric"><span>ĐIỂM SỐ</span><strong id="score">0000</strong></div>
+          <div class="metric"><span>ĐƠN MÀN NÀY</span><strong><b id="deliveries">0</b><small> / <span id="stage-goal">2</span></small></strong></div>
+          <div class="metric metric-time"><span>THỜI GIAN</span><strong id="time-left">90<small>s</small></strong></div>
+          <div class="metric battery-metric"><span>NĂNG LƯỢNG</span><strong id="battery-label">100%</strong><div class="battery-track"><i id="battery-fill"></i></div></div>
+        </div>
+
+        <div class="mode-switch" role="group" aria-label="Chế độ điều khiển">
+          <button class="mode-button is-active" id="direct-mode" type="button" aria-pressed="true">⌖ LÁI TRỰC TIẾP</button>
+          <button class="mode-button" id="program-mode" type="button" aria-pressed="false">⌘ LẬP TRÌNH LỆNH</button>
+        </div>
+
+        <section class="direct-controls" id="direct-controls" aria-label="Điều khiển robot">
+          <div class="section-label"><span>ĐIỀU KHIỂN HƯỚNG</span><small>MŨI TÊN / WASD</small></div>
+          <div class="dpad">
+            <span></span><button class="dpad-button" data-direction="up" type="button" aria-label="Đi lên">↑</button><span></span>
+            <button class="dpad-button" data-direction="left" type="button" aria-label="Đi sang trái">←</button><button class="dpad-button dpad-center" type="button" aria-label="Robot AGV">🤖</button><button class="dpad-button" data-direction="right" type="button" aria-label="Đi sang phải">→</button>
+            <span></span><button class="dpad-button" data-direction="down" type="button" aria-label="Đi xuống">↓</button><span></span>
+          </div>
+          <p class="control-note">Mỗi bước đi tiêu hao 1% pin.</p>
+        </section>
+
+        <section class="program-controls is-hidden" id="program-controls" aria-label="Lập trình chuỗi lệnh">
+          <div class="section-label"><span>CHƯƠNG TRÌNH LỆNH</span><small>PLC / LOGIC</small></div>
+          <label class="command-select-label" for="command-select">THÊM LỆNH</label>
+          <div class="command-entry">
+            <select id="command-select">
+              <option value="forward">↑ Đi thẳng</option>
+              <option value="left">↶ Rẽ trái</option>
+              <option value="right">↷ Rẽ phải</option>
+              <option value="scan">▦ Quét mã</option>
+            </select>
+            <button id="add-command" type="button" aria-label="Thêm lệnh">＋</button>
+          </div>
+          <div class="program-queue" id="program-queue" aria-live="polite"><span class="queue-empty">Chưa có lệnh. Thêm lệnh để lập trình.</span></div>
+          <div class="program-actions">
+            <button class="run-button" id="run-program" type="button">▶ CHẠY CHƯƠNG TRÌNH</button>
+            <button class="clear-button" id="clear-program" type="button" aria-label="Xóa toàn bộ lệnh" title="Xóa toàn bộ lệnh">⌫</button>
+          </div>
+          <p class="control-note">Robot thực thi lần lượt; có thể dùng Quét mã tại trạm hàng và điểm giao.</p>
+        </section>
+
+        <div class="status-message" id="status-message" role="status">Hệ thống sẵn sàng. Bắt đầu ca vận hành để nhận đơn.</div>
+      </aside>
+
+      <section class="map-panel" aria-label="Bản đồ lưới nhà kho">
+        <div class="map-header">
+          <div><p class="eyebrow" id="map-stage-label">MÀN 1 · KHU VỰC A</p><h2 id="map-name">Sơ đồ kho hàng</h2></div>
+          <div class="map-meta"><span><i class="legend-floor"></i> LỐI ĐI</span><span id="order-id">ĐƠN: --</span></div>
+        </div>
+        <div class="map-wrap">
+          <div class="coordinate-y" aria-hidden="true"><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span></div>
+          <div class="grid-map" id="grid-map" role="grid" aria-label="Lưới kho hàng 10 cột, 8 hàng"></div>
+          <div class="coordinate-x" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span><span>J</span></div>
+        </div>
+        <div class="map-footer">
+          <div class="legend"><span><i class="legend-agv">🤖</i> AGV</span><span><i class="legend-pickup">▦</i> TRẠM LẤY</span><span><i class="legend-dock">⌂</i> ĐIỂM GIAO</span><span><i class="legend-obstacle">▧</i> VẬT CẢN</span><span><i class="legend-forklift">🚜</i> XE NÂNG</span><span><i class="legend-power">🔋</i> PIN DỰ PHÒNG</span></div>
+          <div class="mission-card"><span class="mission-icon" id="mission-icon">📦</span><div><small>ĐƠN HÀNG HIỆN TẠI</small><strong id="mission-text">Chờ bắt đầu ca</strong></div><span class="combo-pill" id="combo-meter">🔥 x0</span></div>
+        </div>
+      </section>
+    </section>
+
+    <footer class="footer-bar"><span>AGV FLEET CONTROL <b>v1.0</b></span><span>WEB AUDIO <i class="live-dot"></i> LOCAL SIMULATION</span></footer>
+
+    <section class="overlay" id="start-overlay" aria-modal="true" role="dialog" aria-labelledby="start-title">
+      <div class="dialog start-dialog">
+        <div class="dialog-mark">🤖</div>
+        <p class="eyebrow">SMART WAREHOUSE · TRAINING SIMULATOR</p>
+        <h2 id="start-title">AGV DELIVERY</h2>
+        <p class="dialog-subtitle">Lập trình lộ trình. Giao hàng chính xác.</p>
+        <div class="briefing"><strong>NHIỆM VỤ CA</strong><p>Đi tới trạm barcode để nhận kiện hàng, sau đó đưa AGV đến đúng điểm giao trước khi hết giờ.</p></div>
+        <label class="player-name-label" for="player-name">TÊN NGƯỜI CHƠI</label>
+        <input class="player-name-input" id="player-name" type="text" maxlength="18" autocomplete="nickname" placeholder="Nhập tên của bạn">
+        <div class="instruction-row"><span>⌨️ Mũi tên / WASD</span><span>▦ Lấy hàng và giao hàng</span></div>
+        <button class="primary-action" id="start-button" type="button">▶ BẮT ĐẦU CA</button>
+        <button class="secondary-action stage-select-open" id="open-stage-select" type="button">▦ CHỌN MÀN CHƠI</button>
+        <small class="record-note">Kỷ lục hiện tại: <strong id="menu-record">0</strong> điểm</small>
+      </div>
+    </section>
+
+    <section class="overlay is-hidden" id="stage-select-overlay" aria-modal="true" role="dialog" aria-labelledby="stage-select-title">
+      <div class="dialog stage-select-dialog">
+        <p class="eyebrow">TIẾN ĐỘ CHIẾN DỊCH</p>
+        <h2 id="stage-select-title">CHỌN MÀN CHƠI</h2>
+        <p class="stage-select-subtitle">Xem màn đã qua, số sao tốt nhất và màn đang mở khóa.</p>
+        <div class="stage-list" id="stage-list"></div>
+        <button class="secondary-action" id="close-stage-select" type="button">← QUAY LẠI MENU</button>
+      </div>
+    </section>
+
+    <section class="overlay is-hidden" id="pause-overlay" aria-modal="true" role="dialog" aria-labelledby="pause-title">
+      <div class="dialog pause-dialog">
+        <div class="dialog-mark">⏸️</div>
+        <p class="eyebrow">ĐIỀU KHIỂN CA</p>
+        <h2 id="pause-title">ĐANG TẠM DỪNG</h2>
+        <div class="pause-actions">
+          <button class="primary-action" id="continue-button" type="button">▶ CHƠI TIẾP</button>
+          <button class="secondary-action" id="reset-button" type="button">↻ RESET TỪ MÀN 1</button>
+          <button class="secondary-action exit-action" id="menu-return-button" type="button">⌂ VỀ MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay is-hidden" id="stage-overlay" aria-modal="true" role="dialog" aria-labelledby="stage-title">
+      <div class="dialog stage-dialog">
+        <div class="dialog-mark" id="stage-icon">🌟</div>
+        <p class="eyebrow" id="stage-kicker">BÁO CÁO MÀN</p>
+        <h2 id="stage-title">MÀN ĐÃ HOÀN THÀNH</h2>
+        <div class="stage-stars" id="stage-stars" aria-label="Số sao đạt được">☆☆☆</div>
+        <p class="stage-result-copy" id="stage-result-copy">Đơn hàng đã giao đủ.</p>
+        <div class="star-criteria"><span>⭐ Đủ số đơn</span><span>⭐⭐ Pin còn từ 70%</span><span>⭐⭐⭐ Pin ≥85%, còn ≥20 giây</span></div>
+        <button class="primary-action" id="next-stage-button" type="button">TIẾP TỤC SANG MÀN SAU →</button>
+        <button class="secondary-action" id="stage-replay-button" type="button">↻ CHƠI LẠI MÀN NÀY</button>
+        <button class="secondary-action exit-action" id="stage-menu-button" type="button">⌂ VỀ MENU</button>
+      </div>
+    </section>
+
+    <section class="overlay is-hidden" id="end-overlay" aria-modal="true" role="dialog" aria-labelledby="end-title">
+      <div class="dialog end-dialog">
+        <div class="dialog-mark" id="end-icon">📦</div>
+        <p class="eyebrow" id="end-kicker">BÁO CÁO CA</p>
+        <h2 id="end-title">CA VẬN HÀNH KẾT THÚC</h2>
+        <p class="new-record is-hidden" id="new-record">🏆 KỶ LỤC MỚI!</p>
+        <div class="summary-grid"><span>Tay lái</span><strong id="final-player">Người chơi</strong><span>Điểm đạt được</span><strong id="final-score">0</strong><span>Đơn đã giao</span><strong id="final-deliveries">0</strong><span>Tổng sao</span><strong id="final-stars">0 / 9 ⭐</strong><span>Năng lượng còn lại</span><strong id="final-battery">0%</strong></div>
+        <button class="primary-action" id="restart-button" type="button">↻ CHƠI LẠI TỪ ĐẦU</button>
+      </div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
